@@ -283,18 +283,18 @@ function loadPhotos(dir) {
     .map(f => path.join(dir, f));
 }
 
-// ── Load photo-map JSON (day_label -> [file, ...]) ───────────────────────────
+// ── Load photo-map JSON (day_label -> [{file, caption}, ...]) ────────────────
 function loadPhotoMap(jsonPath, photosDir) {
   if (!jsonPath || !fs.existsSync(jsonPath)) return null;
   const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-  // raw is [{day, file}, ...]  or  {day: [file, ...]}
-  const map = {};  // normalized_key -> [absolute_path, ...]
+  const map = {};  // normalized_key -> [{path, caption}, ...]
   const arr = Array.isArray(raw) ? raw : Object.entries(raw).flatMap(([d, files]) => files.map(f => ({ day: d, file: f })));
-  for (const { day, file } of arr) {
+  for (const entry of arr) {
+    const { day, file, caption } = entry;
     const key = normDay(day);
     if (!map[key]) map[key] = [];
     const abs = path.isAbsolute(file) ? file : path.join(photosDir, file);
-    if (fs.existsSync(abs)) map[key].push(abs);
+    if (fs.existsSync(abs)) map[key].push({ path: abs, caption: caption || null });
   }
   return map;
 }
@@ -447,12 +447,10 @@ async function buildDocx() {
 
       // Inject photo(s) for this day section
       if (photoMap) {
-        // Use the day-keyed mapping: find photos that belong to this exact day
-        const dayKey = normDay(sec.title);
+        const dayKey  = normDay(sec.title);
         const dayPhotos = photoMap[dayKey] || [];
-        for (const imgFile of dayPhotos) {
-          const caption = path.basename(imgFile, path.extname(imgFile)).replace(/[-_image]/g, ' ').trim();
-          embedImage(imgFile, caption).forEach(p => body.push(p));
+        for (const { path: imgFile, caption } of dayPhotos) {
+          embedImage(imgFile, caption || sec.title).forEach(p => body.push(p));
         }
       }
 
