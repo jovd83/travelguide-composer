@@ -1,0 +1,26 @@
+{
+  "skill_name": "travelguide-composer",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I have a Dutch-language Florida-style road trip itinerary (5 days, Orlando + Nature). Please process it with the travelguide-composer skill:\n- Style: Navigational Roadbook & Connoisseur (Michelin Green)\n- Format: Word DOCX\n- Ages: 2 adults (35-40), 1 teenager (15)\n- Dietary needs: none\n- Interests: theme parks, nature, wildlife\n\nThe itinerary file is at: c:\\\\projects\\\\skills\\\\travelguide-composer\\\\travelguide-composer-workspace\\\\inputs\\\\florida_style_mock.md\n\nSave the output DOCX to: c:\\\\projects\\\\skills\\\\travelguide-composer\\\\travelguide-composer-workspace\\\\iteration-1\\\\roadbook-docx-dutch\\\\{config}\\\\outputs\\\\florida_roadbook.docx\n\nAlso save the enriched markdown to: c:\\\\projects\\\\skills\\\\travelguide-composer\\\\travelguide-composer-workspace\\\\iteration-1\\\\roadbook-docx-dutch\\\\{config}\\\\outputs\\\\florida_enriched.md",
+      "expected_output": "A DOCX roadbook file with: (1) table of contents, (2) per-day structure with Algemeen/Hotel/Maaltijden/Gereserveerde activiteiten/Dagindeling sections, (3) bare URLs replaced with rich descriptive text, (4) empty meal slots filled with restaurant recommendations, (5) embedded photos from real sources, (6) climate/timezone table, (7) consistent Michelin Green roadbook styling",
+      "files": ["c:\\projects\\skills\\travelguide-composer\\travelguide-composer-workspace\\inputs\\florida_style_mock.md"],
+      "assertions": []
+    },
+    {
+      "id": 1,
+      "prompt": "Please use the travelguide-composer skill to enrich this 4-day Tuscany + Cinque Terre itinerary and generate a styled travel guide:\n- Style: Boutique, Design & Minimalist (Cereal/Wallpaper* style)\n- Format: Dynamic HTML\n- Ages: 2 adults (38, 40), 2 children (8, 12)\n- Dietary needs: Vegan + gluten-free\n- Interests: art, history, hiking, family activities\n\nThe itinerary file is at: c:\\\\projects\\\\skills\\\\travelguide-composer\\\\travelguide-composer-workspace\\\\inputs\\\\tuscany_gaps_mock.md\n\nSave the output HTML to: c:\\\\projects\\\\skills\\\\travelguide-composer\\\\travelguide-composer-workspace\\\\iteration-1\\\\gap-filling-boutique-html\\\\{config}\\\\outputs\\\\tuscany_guide.html\n\nAlso save the enriched markdown to: c:\\\\projects\\\\skills\\\\travelguide-composer\\\\travelguide-composer-workspace\\\\iteration-1\\\\gap-filling-boutique-html\\\\{config}\\\\outputs\\\\tuscany_enriched.md",
+      "expected_output": "An HTML travel guide with: (1) all 5 dining gaps filled with real vegan/gluten-free restaurants with addresses and hours, (2) afternoon activity suggestion filled with family-friendly options, (3) bare URLs turned into rich descriptive travel essays (2-3 paragraphs each), (4) real photos embedded with source credits, (5) Boutique CSS theme applied with minimalist styling, (6) interactive Leaflet maps for key locations, (7) pacing/energy tier labels per day",
+      "files": ["c:\\projects\\skills\\travelguide-composer\\travelguide-composer-workspace\\inputs\\tuscany_gaps_mock.md"],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "prompt": "Use the travelguide-composer skill to create a premium travel guide for this 6-day Portugal road trip:\n- Style: Hyper-Opinionated & Curated Mentor (Rick Steves style)\n- Format: Dynamic HTML\n- Ages: couple (42, 45)\n- Dietary needs: none\n- Interests: history, architecture, local culture, fado music\n\nThe itinerary file is at: c:\\\\projects\\\\skills\\\\travelguide-composer\\\\travelguide-composer-workspace\\\\inputs\\\\portugal_roadbook_mock.md\n\nSave the output HTML to: c:\\\\projects\\\\skills\\\\travelguide-composer\\\\travelguide-composer-workspace\\\\iteration-1\\\\portugal-rick-steves-html\\\\{config}\\\\outputs\\\\portugal_guide.html\n\nAlso save the enriched markdown to: c:\\\\projects\\\\skills\\\\travelguide-composer\\\\travelguide-composer-workspace\\\\iteration-1\\\\portugal-rick-steves-html\\\\{config}\\\\outputs\\\\portugal_enriched.md",
+      "expected_output": "An HTML travel guide with: (1) all empty meal slots filled with curated local restaurant recommendations with Rick Steves opinionated commentary, (2) all bare URLs enriched with 2-3 paragraph travel essays in Rick Steves voice, (3) Insider Tip boxes for each major sight, (4) Warning/Avoid sections where relevant, (5) real photos embedded, (6) mobile Google Maps navigation links between each day's stops, (7) local etiquette tips (fado rules, tipping customs, etc.), (8) sensory moodboard with music/film/book recommendations per destination, (9) weather packing grid for September Portugal",
+      "files": ["c:\\projects\\skills\\travelguide-composer\\travelguide-composer-workspace\\inputs\\portugal_roadbook_mock.md"],
+      "assertions": []
+    }
+  ]
+}

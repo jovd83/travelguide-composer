@@ -1,0 +1,85 @@
+/* Boutique, Design & Minimalist Theme - Cereal/Wallpaper* style */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600&family=Inter:wght@300;400&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    line-height: 1.8;
+    color: #2b2d2f;
+    background-color: #f7f6f3; /* Quiet luxury pale gray-warm */
+    margin: 0;
+    padding: 4rem 6rem;
+}
+
+.container {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 200;
+    font-size: 3rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    text-align: left;
+    margin-bottom: 4rem;
+    line-height: 1.2;
+}
+
+h2 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    font-size: 1.6rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    margin-top: 4rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e1deda;
+    padding-bottom: 0.75rem;
+}
+
+h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+    color: #2b2d2f;
+    margin-top: 2rem;
+}
+
+p {
+    margin-bottom: 1.75rem;
+    color: #4a4d50;
+}
+
+.curated-spot {
+    background: #ffffff;
+    border: 1px solid #ebe9e4;
+    padding: 2.5rem;
+    margin: 3rem 0;
+    border-radius: 2px;
+}
+
+.curated-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #8a8885;
+    margin-bottom: 0.5rem;
+}
+
+.curated-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    font-size: 1.35rem;
+    color: #1a1a1a;
+    margin-top: 0;
+}
+
+.whitespace-divider {
+    height: 80px;
+}

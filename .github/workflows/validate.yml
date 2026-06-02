@@ -1,0 +1,72 @@
+name: Validate Skill
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          python -c "
+          import re, sys
+          with open('travelguide-composer/SKILL.md') as f:
+              content = f.read()
+          # Check frontmatter exists
+          assert content.startswith('---'), 'Missing YAML frontmatter'
+          fm_end = content.index('---', 3)
+          fm = content[3:fm_end]
+          assert 'name:' in fm, 'Missing name field'
+          assert 'description:' in fm, 'Missing description field'
+          print('SKILL.md frontmatter: OK')
+          "
+
+      - name: Check required files exist
+        run: |
+          for f in \
+            travelguide-composer/SKILL.md \
+            travelguide-composer/scripts/generate_docx.js \
+            travelguide-composer/scripts/generate_outputs.py \
+            travelguide-composer/scripts/parse_itinerary.py \
+            travelguide-composer/references/gap_detection_guide.md \
+            travelguide-composer/references/style_guide.md \
+            travelguide-composer/evals/evals.json \
+            CHANGELOG.md \
+            LICENSE \
+            README.md; do
+            test -f "$f" && echo "OK: $f" || (echo "MISSING: $f" && exit 1)
+          done
+
+      - name: Validate evals.json structure
+        run: |
+          python -c "
+          import json, sys
+          with open('travelguide-composer/evals/evals.json') as f:
+              data = json.load(f)
+          assert 'skill_name' in data, 'Missing skill_name'
+          assert 'evals' in data and len(data['evals']) > 0, 'No evals defined'
+          for e in data['evals']:
+              assert 'id' in e and 'prompt' in e, f'Eval missing id or prompt: {e}'
+          print(f'evals.json: OK ({len(data[\"evals\"])} evals)')
+          "
+
+      - name: Check CHANGELOG format
+        run: |
+          python -c "
+          with open('CHANGELOG.md') as f:
+              content = f.read()
+          assert '## [' in content, 'No versioned entry in CHANGELOG.md'
+          assert 'Keep a Changelog' in content, 'Missing Keep a Changelog link'
+          print('CHANGELOG.md: OK')
+          "

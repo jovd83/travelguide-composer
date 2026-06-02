@@ -1,0 +1,8 @@
+node_modules/
+travelguide-composer-workspace/
+travelguide-composer/scratch/
+*.log
+*.err
+__pycache__/
+*.pyc
+.claude/

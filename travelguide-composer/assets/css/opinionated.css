@@ -1,0 +1,79 @@
+/* Hyper-Opinionated & Curated Theme - Rick Steves style */
+@import url('https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=Karla:wght@400;700&display=swap');
+
+body {
+    font-family: 'Karla', sans-serif;
+    line-height: 1.65;
+    color: #2d3748;
+    background-color: #fafbfd;
+    padding: 2.5rem;
+}
+
+.container {
+    max-width: 780px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-family: 'Chivo', sans-serif;
+    font-weight: 900;
+    font-size: 2.5rem;
+    color: #1a365d;
+    margin-bottom: 1.5rem;
+    text-shadow: 1px 1px 0px #f6ad55;
+}
+
+h2 {
+    font-family: 'Chivo', sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: #2b6cb0;
+    margin-top: 2.5rem;
+    border-bottom: 2px dashed #f6ad55;
+    padding-bottom: 0.5rem;
+}
+
+h3 {
+    font-family: 'Chivo', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #2c5282;
+}
+
+.insider-tip {
+    background-color: #fffaf0;
+    border: 2px solid #feebc8;
+    border-left: 6px solid #dd6b20;
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    box-shadow: 2px 2px 8px rgba(221, 107, 32, 0.05);
+}
+
+.insider-tip-header {
+    font-family: 'Chivo', sans-serif;
+    font-weight: 900;
+    color: #dd6b20;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.tourist-trap-warning {
+    background-color: #fff5f5;
+    border: 2px solid #fed7d7;
+    border-left: 6px solid #e53e3e;
+    border-radius: 6px;
+    padding: 1.25rem;
+    margin: 2rem 0;
+}
+
+.tourist-trap-header {
+    font-family: 'Chivo', sans-serif;
+    font-weight: 900;
+    color: #e53e3e;
+    font-size: 1rem;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}

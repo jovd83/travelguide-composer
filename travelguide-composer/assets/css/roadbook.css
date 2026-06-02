@@ -1,0 +1,101 @@
+/* Navigational Roadbook & Connoisseur Grid Theme - Michelin/Marco Polo style */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Roboto:wght@400;500;700;900&display=swap');
+
+body {
+    font-family: 'Roboto', sans-serif;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #f8f9fa;
+    padding: 2rem;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-weight: 900;
+    font-size: 2.25rem;
+    color: #1e4620; /* Michelin deep dark green */
+    border-bottom: 4px solid #1e4620;
+    padding-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h2 {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #2e7d32;
+    margin-top: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+h3 {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #37474f;
+    margin-top: 1.5rem;
+}
+
+.roadbook-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.roadbook-card {
+    background: #ffffff;
+    border: 1px solid #cfd8dc;
+    border-top: 4px solid #2e7d32;
+    border-radius: 4px;
+    padding: 1.25rem;
+}
+
+.rating-badge {
+    display: inline-block;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    padding: 0.25rem 0.5rem;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.rating-stars {
+    color: #f57f17;
+    font-size: 1rem;
+    margin-left: 0.5rem;
+}
+
+.logistics-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+}
+
+.logistics-table th, .logistics-table td {
+    border: 1px solid #cfd8dc;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.logistics-table th {
+    background-color: #eceff1;
+    font-weight: 700;
+}
+
+.nav-metric {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 700;
+    color: #e53935;
+}
