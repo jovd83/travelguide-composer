@@ -125,7 +125,7 @@ function textPara(text, opts = {}) {
   });
 }
 
-// ── Metadata table (Algemeen / Maaltijden rows) ──────────────────────────────
+// ── 2-column label/value table (Algemeen / Maaltijden) ───────────────────────
 function metaTable(rows) {
   const b = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
   const borders = { top: b, bottom: b, left: b, right: b };
@@ -146,6 +146,55 @@ function metaTable(rows) {
       }),
     ]}))
   });
+}
+
+// ── General markdown table → Word Table ──────────────────────────────────────
+// Accepts an array of raw '| a | b | c |' strings (including separator rows).
+// Returns an array of docx objects (Table + spacing Paragraph).
+function buildMarkdownTable(tableLines) {
+  // Parse rows, skip separator lines
+  const parsed = [];   // [{cells: string[], header: bool}]
+  let firstDataSeen = false;
+  for (const line of tableLines) {
+    const cells = line.trim().split('|').slice(1, -1).map(c => c.trim());
+    if (cells.every(c => /^[-: ]+$/.test(c))) { firstDataSeen = true; continue; } // separator
+    parsed.push({ cells, header: !firstDataSeen });
+    if (!firstDataSeen) firstDataSeen = false; // first real row = header
+  }
+  if (!parsed.length) return [];
+
+  const colCount  = Math.max(...parsed.map(r => r.cells.length));
+  const colW      = Math.floor(CONTENT_W / colCount);
+  const colWidths = Array.from({ length: colCount }, (_, i) =>
+    i === colCount - 1 ? CONTENT_W - colW * (colCount - 1) : colW
+  );
+
+  const bd = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+  const borders = { top: bd, bottom: bd, left: bd, right: bd };
+
+  const tableRows = parsed.map((row, rowIdx) =>
+    new TableRow({
+      tableHeader: rowIdx === 0,
+      children: Array.from({ length: colCount }, (_, ci) => {
+        const cellText = row.cells[ci] || '';
+        const isHeader = rowIdx === 0;
+        return new TableCell({
+          borders,
+          width: { size: colWidths[ci], type: WidthType.DXA },
+          shading: isHeader ? { fill: 'E8F5E9', type: ShadingType.CLEAR } : undefined,
+          margins: { top: 60, bottom: 60, left: 120, right: 120 },
+          children: [new Paragraph({
+            children: parseInline(cellText, { size: 19, bold: isHeader }),
+          })]
+        });
+      })
+    })
+  );
+
+  return [
+    new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: colWidths, rows: tableRows }),
+    new Paragraph({ spacing: { after: 100 } }),
+  ];
 }
 
 // ── Route link paragraph (clickable, styled) ─────────────────────────────────
@@ -326,10 +375,28 @@ function stripBold(s) {
 //   tip blockquote → standalone styled block, level reset
 function buildDagindeling(lines) {
   const result = [];
-  let lastLevel = -1;  // -1 = no previous context
+  let lastLevel  = -1;
+  let tableBuf   = [];   // buffer consecutive | table | lines
+
+  const flushTable = () => {
+    if (tableBuf.length) {
+      buildMarkdownTable(tableBuf).forEach(el => result.push(el));
+      tableBuf = [];
+      lastLevel = -1;   // reset bullet context after a table
+    }
+  };
 
   for (const rawLine of lines) {
     const s = rawLine.trim();
+
+    // Collect table rows (lines that look like | ... |)
+    if (s.startsWith('|') && s.endsWith('|')) {
+      tableBuf.push(s);
+      continue;
+    }
+    // Non-table line → flush any buffered table first
+    flushTable();
+
     if (!s || s.match(/^#{1,4}\s/)) continue;
 
     // Blockquote tip — standalone styled block
@@ -385,6 +452,7 @@ function buildDagindeling(lines) {
     lastLevel = 0;
   }
 
+  flushTable();  // flush any table at end of section
   return result;
 }
 
@@ -459,8 +527,17 @@ async function buildDocx() {
       let hotelLines = [];
       let dagLines   = [];       // accumulate Dagindeling content
       let inDag      = false;
+      let mainTblBuf = [];       // buffer for multi-row tables in main loop
+
+      const flushMainTable = () => {
+        if (mainTblBuf.length) {
+          buildMarkdownTable(mainTblBuf).forEach(el => body.push(el));
+          mainTblBuf = [];
+        }
+      };
 
       const flush = () => {
+        flushMainTable();
         if (hotelLines.length) {
           hotelLines.forEach(l => body.push(textPara(l, { size: 20, color: '333333', after: 60 })));
           hotelLines = [];
@@ -497,15 +574,13 @@ async function buildDocx() {
           continue;
         }
 
-        // ── Table row (Algemeen / Maaltijden) ────────────────────────────────
+        // ── Table row — buffer full multi-row table before rendering ─────────
         if (s.startsWith('|') && s.endsWith('|')) {
-          const cells = s.split('|').slice(1, -1).map(c => c.trim());
-          if (!cells.some(c => /^[-: ]+$/.test(c))) {
-            body.push(metaTable([[cells[0], cells[1] || '']]));
-            body.push(new Paragraph({ spacing: { after: 40 } }));
-          }
+          mainTblBuf.push(s);
           continue;
         }
+        // Non-table line: flush buffered table rows first
+        flushMainTable();
 
         // ── Meal / list item: **Label**: value ───────────────────────────────
         const mealM = s.match(/^[-*]\s+\*\*(.+?)\*\*:\s*(.+)?/);
