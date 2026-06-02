@@ -34,10 +34,11 @@ const IMG_WIDTH_PX    = 520;           // ~13.7 cm — fits A4 with margins
 const args = process.argv.slice(2);
 const argMap = {};
 for (let i = 0; i < args.length; i += 2) argMap[args[i].replace('--', '')] = args[i + 1];
-const mdPath     = argMap['markdown'] || './scratch/itinerary_parsed.md';
-const outputPath = argMap['output']   || './output_roadbook.docx';
-const lang       = argMap['lang']     || 'nl';
-const photosDir  = argMap['photos']   || path.join(path.dirname(mdPath), '..', 'photos');
+const mdPath      = argMap['markdown']  || './scratch/itinerary_parsed.md';
+const outputPath  = argMap['output']    || './output_roadbook.docx';
+const lang        = argMap['lang']      || 'nl';
+const photosDir   = argMap['photos']    || path.join(path.dirname(mdPath), '..', 'photos');
+const photoMapArg = argMap['photo-map'] || null;
 
 // ── Labels ──────────────────────────────────────────────────────────────────
 const L = lang === 'nl'
@@ -202,19 +203,61 @@ function tipPara(text) {
   });
 }
 
-// ── Image embedding ──────────────────────────────────────────────────────────
+// ── Read actual image dimensions from file header (no external deps) ─────────
+function readImageDimensions(buf, ext) {
+  try {
+    if (ext === 'png') {
+      // PNG: IHDR chunk at offset 8; width @ 16, height @ 20 (big-endian uint32)
+      if (buf[0] === 0x89 && buf[1] === 0x50) {
+        return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+      }
+    }
+    if (ext === 'jpg' || ext === 'jpeg') {
+      // JPEG: scan segments for SOF0/SOF2 markers which carry dimensions
+      let i = 2; // skip SOI FF D8
+      while (i + 3 < buf.length) {
+        if (buf[i] !== 0xFF) break;
+        i++;
+        const marker = buf[i++];
+        if (marker === 0xD9 || marker === 0xDA) break; // EOI / SOS
+        const segLen = buf.readUInt16BE(i); i += 2;
+        // SOF markers: C0-C3, C5-C7, C9-CB, CD-CF
+        const isSOF = (marker >= 0xC0 && marker <= 0xCF) &&
+                      marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC;
+        if (isSOF && i + 4 < buf.length) {
+          // precision (1) + height (2) + width (2)
+          return { w: buf.readUInt16BE(i + 3), h: buf.readUInt16BE(i + 1) };
+        }
+        i += segLen - 2;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+// ── Image embedding — preserves original aspect ratio ────────────────────────
 function embedImage(imgPath, caption) {
   try {
     const ext  = path.extname(imgPath).replace('.', '').toLowerCase() || 'jpeg';
     const type = ext === 'jpg' ? 'jpeg' : ext;
     const data = fs.readFileSync(imgPath);
+
+    // Compute render size preserving aspect ratio
+    const dims = readImageDimensions(data, ext);
+    let rw = IMG_WIDTH_PX;
+    let rh = dims ? Math.round(IMG_WIDTH_PX * dims.h / dims.w) : Math.round(IMG_WIDTH_PX * 0.65);
+
+    // Cap height so tall portrait images don't overflow a page (~14 cm at 96 dpi)
+    const MAX_H = 530;
+    if (rh > MAX_H) { rh = MAX_H; rw = Math.round(MAX_H * (dims ? dims.w / dims.h : 1.5)); }
+
     return [
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { before: 160, after: 80 },
         children: [new ImageRun({
           type, data,
-          transformation: { width: IMG_WIDTH_PX, height: Math.round(IMG_WIDTH_PX * 0.65) },
+          transformation: { width: rw, height: rh },
           altText: { title: caption, description: caption, name: caption }
         })]
       }),
@@ -240,64 +283,106 @@ function loadPhotos(dir) {
     .map(f => path.join(dir, f));
 }
 
-// ── Process Dagindeling lines → bullets ──────────────────────────────────────
+// ── Load photo-map JSON (day_label -> [file, ...]) ───────────────────────────
+function loadPhotoMap(jsonPath, photosDir) {
+  if (!jsonPath || !fs.existsSync(jsonPath)) return null;
+  const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+  // raw is [{day, file}, ...]  or  {day: [file, ...]}
+  const map = {};  // normalized_key -> [absolute_path, ...]
+  const arr = Array.isArray(raw) ? raw : Object.entries(raw).flatMap(([d, files]) => files.map(f => ({ day: d, file: f })));
+  for (const { day, file } of arr) {
+    const key = normDay(day);
+    if (!map[key]) map[key] = [];
+    const abs = path.isAbsolute(file) ? file : path.join(photosDir, file);
+    if (fs.existsSync(abs)) map[key].push(abs);
+  }
+  return map;
+}
+
+// Normalize a day title to a stable key: extract "dag N" number
+function normDay(title) {
+  if (!title) return '';
+  const m = (title + '').match(/\bdag\s+(\d+)/i);
+  return m ? `dag${m[1]}` : title.toLowerCase().replace(/\s+/g, '').slice(0, 20);
+}
+
+// ── Strip leading/trailing ** for regex testing only ─────────────────────────
+function stripBold(s) {
+  return s.replace(/^\*+\s*/, '').replace(/\s*\*+$/, '').trim();
+}
+
+// ── Process Dagindeling lines → 3-level nested bullets ───────────────────────
+//
+//  L0 (•) — time-of-day header: Ochtend / Namiddag / Avond / ...
+//  L1 (○) — time-slot entry:   09:00, 16u00–20u00, ~20:30, or first desc after L0
+//  L2 (▪) — detail paragraphs following a L1 time-slot
+//
+//  Transition rules:
+//   TIME_OF_DAY match → always L0, reset
+//   TIME_SLOT match   → always L1 (even from L2)
+//   description after L0 → L1 (first sub-item of the header)
+//   description after L1 or L2 → L2 (detail stays at L2)
+//   route link → rendered inline, no level change
+//   tip blockquote → standalone styled block, level reset
 function buildDagindeling(lines) {
   const result = [];
-  let lastLevel = -1;
+  let lastLevel = -1;  // -1 = no previous context
 
   for (const rawLine of lines) {
     const s = rawLine.trim();
     if (!s || s.match(/^#{1,4}\s/)) continue;
 
-    // Blockquote tip
+    // Blockquote tip — standalone styled block
     if (s.startsWith('>')) {
       result.push(tipPara(s));
       lastLevel = -1;
       continue;
     }
 
-    // Standalone route / map link
+    // Horizontal rule / separator
+    if (s.match(/^[-*_]{3,}$/)) { lastLevel = -1; continue; }
+
+    // Standalone route / map link — inline, doesn't change level context
     const rm = s.match(ROUTE_LINK);
     if (rm) {
       result.push(routeLinkPara(rm[1], rm[2], rm[3] || ''));
-      lastLevel = -1;
       continue;
     }
 
-    // Horizontal rule or separator
-    if (s.match(/^[-*_]{3,}$/)) { lastLevel = -1; continue; }
+    // Strip bold markers before pattern testing
+    const sTest = stripBold(s);
 
-    // L1 — time-of-day header
-    if (TIME_OF_DAY.test(s)) {
+    // L0 — time-of-day header (Ochtend, Namiddag, Avond…)
+    if (TIME_OF_DAY.test(sTest)) {
       result.push(scheduleBullet(s, 0, true));
       lastLevel = 0;
       continue;
     }
 
-    // L2 — time-slot entry
-    if (TIME_SLOT.test(s)) {
+    // L1 — time-slot entry (09:00, ~20:30, 16u00–20u00…)
+    if (TIME_SLOT.test(sTest)) {
       result.push(scheduleBullet(s, 1));
       lastLevel = 1;
       continue;
     }
 
-    // L3 — detail paragraph (after a time-slot or another L2/L3)
+    // Description after a time-slot or already at L2 → stay at L2
     if (lastLevel >= 1) {
       result.push(scheduleBullet(s, 2));
-      // keep lastLevel = 2 so subsequent lines stay at L3
       lastLevel = 2;
       continue;
     }
 
-    // L1 fallback (line after a reset — treat as new top-level item)
-    if (lastLevel <= 0) {
-      result.push(scheduleBullet(s, lastLevel < 0 ? 0 : 0));
-      lastLevel = 0;
+    // Description directly after a time-of-day header → L1 sub-item
+    if (lastLevel === 0) {
+      result.push(scheduleBullet(s, 1));
+      lastLevel = 1;
       continue;
     }
 
-    result.push(scheduleBullet(s, 1));
-    lastLevel = 1;
+    // Initial / reset state → L0 fallback
+    result.push(scheduleBullet(s, 0));
+    lastLevel = 0;
   }
 
   return result;
@@ -325,13 +410,9 @@ async function buildDocx() {
   const md       = fs.readFileSync(mdPath, 'utf8');
   const sections = parseMarkdown(md);
   const photos   = loadPhotos(photosDir);
-  let   photoIdx = 0;
-  // Distribute photos evenly: inject one every N days until exhausted
-  const totalH2   = sections.filter(s => s.type === 'h2').length;
-  // photoStep = how many days between photos; minimum 1
-  const photoStep = photos.length > 0 ? Math.max(1, Math.floor(totalH2 / Math.min(photos.length, totalH2))) : Infinity;
+  const photoMap = loadPhotoMap(photoMapArg, photosDir);  // day-keyed map if provided
 
-  console.log(`[DOCX] ${sections.length} sections, ${photos.length} photos available`);
+  console.log(`[DOCX] ${sections.length} sections, ${photos.length} photos available${photoMap ? ' (with day mapping)' : ''}`);
 
   const body = [
     new TableOfContents(L.toc, { hyperlink: true, headingStyleRange: '1-2' }),
@@ -364,11 +445,15 @@ async function buildDocx() {
         border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '2e7d32', space: 1 } },
       }));
 
-      // Inject one photo per N days from photos directory (every photoStep-th day)
-      if (photoIdx < photos.length && (h2count % photoStep === 1 || photoStep === 1)) {
-        const imgFile = photos[photoIdx++];
-        const caption = path.basename(imgFile, path.extname(imgFile)).replace(/[-_]/g, ' ');
-        embedImage(imgFile, caption).forEach(p => body.push(p));
+      // Inject photo(s) for this day section
+      if (photoMap) {
+        // Use the day-keyed mapping: find photos that belong to this exact day
+        const dayKey = normDay(sec.title);
+        const dayPhotos = photoMap[dayKey] || [];
+        for (const imgFile of dayPhotos) {
+          const caption = path.basename(imgFile, path.extname(imgFile)).replace(/[-_image]/g, ' ').trim();
+          embedImage(imgFile, caption).forEach(p => body.push(p));
+        }
       }
 
       // ── Parse sub-sections within the day ───────────────────────────────
