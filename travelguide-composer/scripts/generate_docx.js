@@ -575,7 +575,7 @@ async function buildDocx() {
 
   for (const sec of sections) {
 
-    // ── H1: Part header ──────────────────────────────────────────────────────
+    // ── H1: Part header or intro/appendix section ────────────────────────────
     if (sec.type === 'h1') {
       body.push(new Paragraph({
         heading: HeadingLevel.HEADING_1,
@@ -583,6 +583,57 @@ async function buildDocx() {
         spacing: { before: 400, after: 200 },
         pageBreakBefore: body.length > 3,
       }));
+
+      // Process H1 body lines (intro / appendix sections with ### sub-headings)
+      if (sec.lines && sec.lines.length > 0) {
+        let tblBuf = [];
+        const flushT = () => {
+          if (tblBuf.length) { buildMarkdownTable(tblBuf).forEach(el => body.push(el)); tblBuf = []; }
+        };
+        for (const rawLine of sec.lines) {
+          const s = rawLine.trim();
+          if (s.startsWith('|') && s.endsWith('|')) { tblBuf.push(s); continue; }
+          flushT();
+          if (!s || s.match(/^[-*_]{3,}$/)) continue;
+
+          // ### sub-heading
+          const h3m = s.match(/^###\s+(.+)/);
+          if (h3m) { body.push(new Paragraph({
+            heading: HeadingLevel.HEADING_3,
+            children: [new TextRun({ text: h3m[1], font: 'Calibri', size: 24, bold: true, color: '37474f' })],
+            spacing: { before: 260, after: 100 },
+          })); continue; }
+
+          // #### sub-sub-heading (Malaysia / Singapore labels)
+          const h4m = s.match(/^####\s+(.+)/);
+          if (h4m) { body.push(sightSubHeading(h4m[1])); continue; }
+
+          // Full-line bold = sub-heading
+          const boldM = s.match(/^\*\*([^*]{3,})\*\*\s*[:!?]?\s*$/);
+          if (boldM) { body.push(sightSubHeading(boldM[1])); continue; }
+
+          // Explicit bullet - text
+          const bm = rawLine.match(/^(\s*)[-*]\s+(.+)/);
+          if (bm) {
+            const lvl = bm[1].length === 0 ? 0 : bm[1].length <= 2 ? 1 : 2;
+            body.push(new Paragraph({
+              numbering: { reference: 'schedule', level: lvl },
+              children: parseInline(bm[2], { size: 20 }),
+              spacing: { after: 60 },
+            })); continue;
+          }
+
+          // Route link / meer info / blockquote / image
+          const rm = s.match(ROUTE_LINK);
+          if (rm) { body.push(routeLinkPara(rm[1], rm[2], rm[3] || '')); continue; }
+          if (s.startsWith('📎')) { body.push(meerInfoPara(s)); continue; }
+          if (s.startsWith('>')) { body.push(tipPara(s)); continue; }
+
+          // Default paragraph
+          body.push(textPara(s, { size: 20 }));
+        }
+        flushT();
+      }
       continue;
     }
 
