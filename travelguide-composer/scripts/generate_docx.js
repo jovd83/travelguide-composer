@@ -197,6 +197,56 @@ function buildMarkdownTable(tableLines) {
   ];
 }
 
+// ── Time-of-day heading (Ochtend / Namiddag / Avond) ─────────────────────────
+// These are the TOP-LEVEL structure of a day — rendered as prominent headings
+// with a thick green left border, clearly bigger than sight names below them.
+function timeOfDayHeading(text) {
+  const clean = text.replace(/^\*+|\*+$/g, '').trim();
+  return new Paragraph({
+    children: [new TextRun({ text: clean, bold: true, font: 'Calibri', size: 26, color: '1a5a1a' })],
+    spacing: { before: 320, after: 100 },
+    border: { left: { style: BorderStyle.SINGLE, size: 18, color: '2e7d32', space: 10 } },
+  });
+}
+
+// ── Sight / sub-section heading inside Dagindeling ───────────────────────────
+// Visual hierarchy:
+//   TIME-OF-DAY (26pt green + left border)  ← most prominent
+//     SIGHT NAME (21pt green underline)      ← second level
+//       Sub-section (19pt dark-gray)         ← least prominent
+const SUB_SECTION_RE = /^(Wat is er|Praktische\s*info|Etiquette|Leuke\s+weetjes|Hoe\s+te\s+bereiken|Openingstijden)/i;
+
+function sightSubHeading(text) {
+  const clean       = text.replace(/^\[|\]$/g, '').replace(/^\*+|\*+$/g, '').trim();
+  const isSubSection = SUB_SECTION_RE.test(clean);
+  return new Paragraph({
+    children: [new TextRun({
+      text: clean,
+      bold: true,
+      font: 'Calibri',
+      size: isSubSection ? 19 : 21,
+      color: isSubSection ? '455a64' : '2e6b2e',
+    })],
+    spacing: { before: isSubSection ? 140 : 220, after: isSubSection ? 60 : 80 },
+    border: isSubSection
+      ? {}
+      : { bottom: { style: BorderStyle.SINGLE, size: 2, color: 'b0bec5', space: 2 } },
+  });
+}
+
+// ── 📎 Meer info link line ────────────────────────────────────────────────────
+function meerInfoPara(s) {
+  const cleanText = s.replace(/^📎\s*(Meer\s+info:\s*)?/i, '');
+  return new Paragraph({
+    children: [
+      new TextRun({ text: '📎 Meer info: ', font: 'Calibri', size: 18, color: '888888', bold: true }),
+      ...parseInline(cleanText, { size: 18, color: '555555' }),
+    ],
+    // Large 'after' spacing so the next time-of-day heading has clear separation
+    spacing: { before: 60, after: 240 },
+  });
+}
+
 // ── Route link paragraph (clickable, styled) ─────────────────────────────────
 function routeLinkPara(label, url, suffix = '') {
   const icon = '🗺️';
@@ -374,85 +424,99 @@ function stripBold(s) {
 //   route link → rendered inline, no level change
 //   tip blockquote → standalone styled block, level reset
 function buildDagindeling(lines) {
-  const result = [];
-  let lastLevel  = -1;
-  let tableBuf   = [];   // buffer consecutive | table | lines
+  const result  = [];
+  let lastLevel = -1;   // -1 = plain-text mode; 0/1/2 = time-schedule bullet mode
+  let tableBuf  = [];
 
   const flushTable = () => {
     if (tableBuf.length) {
       buildMarkdownTable(tableBuf).forEach(el => result.push(el));
-      tableBuf = [];
-      lastLevel = -1;   // reset bullet context after a table
+      tableBuf  = [];
+      lastLevel = -1;
     }
   };
 
   for (const rawLine of lines) {
     const s = rawLine.trim();
 
-    // Collect table rows (lines that look like | ... |)
-    if (s.startsWith('|') && s.endsWith('|')) {
-      tableBuf.push(s);
-      continue;
-    }
-    // Non-table line → flush any buffered table first
+    // ── Table rows ────────────────────────────────────────────────────────────
+    if (s.startsWith('|') && s.endsWith('|')) { tableBuf.push(s); continue; }
     flushTable();
 
-    if (!s || s.match(/^#{1,4}\s/)) continue;
+    if (!s) continue;
+    if (s.match(/^#{1,3}\s/)) continue;   // skip H1-H3 (already rendered as Word headings)
 
-    // Blockquote tip — standalone styled block
-    if (s.startsWith('>')) {
-      result.push(tipPara(s));
-      lastLevel = -1;
+    // ── #### heading = sight name or sub-section ─────────────────────────────
+    const h4m = s.match(/^####\s+(.+)/);
+    if (h4m) { result.push(sightSubHeading(h4m[1])); lastLevel = -1; continue; }
+
+    // ── Full-line **bold** = sight name or sub-section heading ────────────────
+    // (entire trimmed string is **wrapped in bold**, nothing else on the line)
+    const fullBoldM = s.match(/^\*\*([^*]{3,})\*\*\s*[:!?]?\s*$/);
+    if (fullBoldM) { result.push(sightSubHeading(fullBoldM[1])); lastLevel = -1; continue; }
+
+    // ── 📎 Meer info link line ────────────────────────────────────────────────
+    if (s.startsWith('📎') || /^Meer\s+info:/i.test(s)) {
+      result.push(meerInfoPara(s)); lastLevel = -1; continue;
+    }
+
+    // ── Inline image ──────────────────────────────────────────────────────────
+    const imgM = s.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+    if (imgM) {
+      if (fs.existsSync(imgM[2])) embedImage(imgM[2], imgM[1]).forEach(el => result.push(el));
       continue;
     }
 
-    // Horizontal rule / separator
+    // ── Blockquote tip ────────────────────────────────────────────────────────
+    if (s.startsWith('>')) { result.push(tipPara(s)); lastLevel = -1; continue; }
+
+    // ── Separator ─────────────────────────────────────────────────────────────
     if (s.match(/^[-*_]{3,}$/)) { lastLevel = -1; continue; }
 
-    // Standalone route / map link — inline, doesn't change level context
+    // ── Route / map link ──────────────────────────────────────────────────────
     const rm = s.match(ROUTE_LINK);
-    if (rm) {
-      result.push(routeLinkPara(rm[1], rm[2], rm[3] || ''));
+    if (rm) { result.push(routeLinkPara(rm[1], rm[2], rm[3] || '')); continue; }
+
+    // ── Explicit markdown bullet: "- text" or "* text" (detected from RAW line)
+    // This MUST come before the time-of-day checks so that `- **Duur**: 1u` renders
+    // as a clean bullet and NOT as a nested schedule bullet with the "-" in the text.
+    const explicitBullet = rawLine.match(/^(\s*)[-*]\s+(.+)/);
+    if (explicitBullet) {
+      const level = explicitBullet[1].length === 0 ? 0 : explicitBullet[1].length <= 2 ? 1 : 2;
+      result.push(scheduleBullet(explicitBullet[2], level));
+      lastLevel = level;
       continue;
     }
 
-    // Strip bold markers before pattern testing
+    // ── Strip bold markers before time-pattern tests ──────────────────────────
     const sTest = stripBold(s);
 
-    // L0 — time-of-day header (Ochtend, Namiddag, Avond…)
+    // ── Time-of-day header (Ochtend, Namiddag, Avond …) ─────────────────────
+    // Rendered as a HEADING paragraph (prominent, green left border), NOT a bullet.
+    // Sight names and activities appear below — visually subordinate.
     if (TIME_OF_DAY.test(sTest)) {
-      result.push(scheduleBullet(s, 0, true));
-      lastLevel = 0;
+      result.push(timeOfDayHeading(s));
+      lastLevel = -1;   // reset to plain-text mode; sights below are sub-headings
       continue;
     }
 
-    // L1 — time-slot entry (09:00, ~20:30, 16u00–20u00…)
+    // ── L1 — time-slot entry (09:00, ~20:30, 16u00–20u00 …) ──────────────────
     if (TIME_SLOT.test(sTest)) {
       result.push(scheduleBullet(s, 1));
       lastLevel = 1;
       continue;
     }
 
-    // Description after a time-slot or already at L2 → stay at L2
-    if (lastLevel >= 1) {
-      result.push(scheduleBullet(s, 2));
-      lastLevel = 2;
-      continue;
-    }
+    // ── Schedule context: descriptions after time slots stay indented ─────────
+    if (lastLevel >= 1) { result.push(scheduleBullet(s, 2)); lastLevel = 2; continue; }
+    if (lastLevel === 0) { result.push(scheduleBullet(s, 1)); lastLevel = 1; continue; }
 
-    // Description directly after a time-of-day header → L1 sub-item
-    if (lastLevel === 0) {
-      result.push(scheduleBullet(s, 1));
-      lastLevel = 1;
-      continue;
-    }
-
-    // Initial / reset state → L0 fallback
-    result.push(scheduleBullet(s, 0));
-    lastLevel = 0;
+    // ── Default: plain body paragraph (after headings, in sight-description mode)
+    result.push(textPara(s, { size: 20 }));
+    // don't change lastLevel — stays -1 so subsequent paragraphs also stay plain
   }
 
-  flushTable();  // flush any table at end of section
+  flushTable();
   return result;
 }
 
@@ -582,16 +646,30 @@ async function buildDocx() {
         // Non-table line: flush buffered table rows first
         flushMainTable();
 
-        // ── Meal / list item: **Label**: value ───────────────────────────────
+        // ── Meal bullet: - **Ontbijt**: ... / - **Lunch**: ... / - **Diner**: ...
         const mealM = s.match(/^[-*]\s+\*\*(.+?)\*\*:\s*(.+)?/);
         if (mealM) {
           body.push(new Paragraph({
+            numbering: { reference: 'schedule', level: 0 },   // proper Word bullet •
             children: [
               new TextRun({ text: mealM[1] + ': ', bold: true, font: 'Calibri', size: 20 }),
               ...parseInline(mealM[2] || '/', { size: 20 }),
             ],
-            spacing: { after: 60 },
-            indent: { left: 360 },
+            spacing: { before: 60, after: 40 },
+          }));
+          continue;
+        }
+
+        // ── ★ Vegetarisch / review links line (sub-item under a meal bullet) ──
+        if (s.startsWith('★') || s.startsWith('⭐')) {
+          const clean = s.replace(/^[★⭐]\s*/, '');
+          body.push(new Paragraph({
+            children: [
+              new TextRun({ text: '★ ', font: 'Calibri', size: 17, color: '2e7d32', bold: true }),
+              ...parseInline(clean, { size: 17, color: '444444' }),
+            ],
+            spacing: { before: 20, after: 80 },
+            indent: { left: 720 },   // indented under the meal bullet
           }));
           continue;
         }
