@@ -492,11 +492,31 @@ function buildDagindeling(lines) {
     const sTest = stripBold(s);
 
     // ── Time-of-day header (Ochtend, Namiddag, Avond …) ─────────────────────
-    // Rendered as a HEADING paragraph (prominent, green left border), NOT a bullet.
-    // Sight names and activities appear below — visually subordinate.
+    // Heading = time label + optional SHORT location/tagline (≤ 50 chars, no
+    // new sentence). Any longer description flows as a body paragraph below.
     if (TIME_OF_DAY.test(sTest)) {
-      result.push(timeOfDayHeading(s));
-      lastLevel = -1;   // reset to plain-text mode; sights below are sub-headings
+      // Strip ALL **bold** markers to get clean text for splitting
+      const fullClean = s.replace(/\*\*/g, '').trim();
+      const dashIdx   = fullClean.indexOf(' — ');
+
+      if (dashIdx < 0) {
+        // No dash: whole line is the heading
+        result.push(timeOfDayHeading(fullClean));
+      } else {
+        const timeLabel = fullClean.slice(0, dashIdx).trim();
+        const rest      = fullClean.slice(dashIdx + 3).trim();
+
+        // Short location name (≤ 50 chars, no mid-sentence period)?
+        const isShortLabel = rest.length <= 50 && !rest.match(/\.\s+\S/);
+        if (isShortLabel) {
+          result.push(timeOfDayHeading(timeLabel + ' — ' + rest));
+        } else {
+          // Long description: heading = time label only; rest = body paragraph
+          result.push(timeOfDayHeading(timeLabel));
+          if (rest) result.push(textPara(rest, { size: 20, after: 80 }));
+        }
+      }
+      lastLevel = -1;
       continue;
     }
 
