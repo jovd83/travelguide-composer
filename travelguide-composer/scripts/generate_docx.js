@@ -39,6 +39,58 @@ const outputPath  = argMap['output']    || './output_roadbook.docx';
 const lang        = argMap['lang']      || 'nl';
 const photosDir   = argMap['photos']    || path.join(path.dirname(mdPath), '..', 'photos');
 const photoMapArg = argMap['photo-map'] || null;
+const themeName   = (argMap['theme']    || 'roadbook').toLowerCase();
+
+// ── Theme palettes ───────────────────────────────────────────────────────────
+const THEMES = {
+  roadbook: {
+    // Michelin Green — authoritative, driver-focused, metric-rich
+    h1:              '1a5a1a',   // deep forest green
+    h2:              '2e7d32',   // medium green
+    h3:              '37474f',   // dark blue-gray
+    sight:           '2e6b2e',   // muted green
+    subsection:      '455a64',   // slate gray
+    timeOfDay:       '1a5a1a',
+    tod_borderColor: '2e7d32',
+    tod_borderSize:  18,
+    tipColor:        '2e7d32',
+    tableHdr:        'E8F5E9',
+    meerInfo:        '888888',
+    pageName:        'Navigational Roadbook',
+  },
+  boutique: {
+    // Cereal / Wallpaper* — minimal, editorial, warm tones
+    h1:              '1a1a1a',   // near-black
+    h2:              '1a1a1a',   // same near-black (day heading)
+    h3:              '5a5a5a',   // medium warm gray
+    sight:           '2c3e50',   // deep slate blue
+    subsection:      '999999',   // light gray
+    timeOfDay:       '1a1a1a',
+    tod_borderColor: 'b09a7a',   // warm sand border (thin)
+    tod_borderSize:  8,
+    tipColor:        'b09a7a',
+    tableHdr:        'f5f0e8',   // warm beige
+    meerInfo:        'aaaaaa',
+    pageName:        'Boutique Curation',
+  },
+  opinionated: {
+    // Rick Steves — warm amber, personal, insider-tip feel
+    h1:              '7b3f00',   // deep amber-brown
+    h2:              'c0550a',   // burnt orange
+    h3:              '5d4037',   // warm brown
+    sight:           'bf360c',   // deep orange-red
+    subsection:      '78350f',   // medium amber
+    timeOfDay:       '7b3f00',
+    tod_borderColor: 'e65100',   // amber orange
+    tod_borderSize:  14,
+    tipColor:        'e65100',
+    tableHdr:        'fff3e0',   // very light amber
+    meerInfo:        '999999',
+    pageName:        'Hyper-Opinionated Mentor',
+  },
+};
+const T = THEMES[themeName] || THEMES.roadbook;
+console.log(`[DOCX] Theme: ${T.pageName || themeName}`);
 
 // ── Labels ──────────────────────────────────────────────────────────────────
 const L = lang === 'nl'
@@ -181,7 +233,7 @@ function buildMarkdownTable(tableLines) {
         return new TableCell({
           borders,
           width: { size: colWidths[ci], type: WidthType.DXA },
-          shading: isHeader ? { fill: 'E8F5E9', type: ShadingType.CLEAR } : undefined,
+          shading: isHeader ? { fill: T.tableHdr, type: ShadingType.CLEAR } : undefined,
           margins: { top: 60, bottom: 60, left: 120, right: 120 },
           children: [new Paragraph({
             children: parseInline(cellText, { size: 19, bold: isHeader }),
@@ -198,14 +250,12 @@ function buildMarkdownTable(tableLines) {
 }
 
 // ── Time-of-day heading (Ochtend / Namiddag / Avond) ─────────────────────────
-// These are the TOP-LEVEL structure of a day — rendered as prominent headings
-// with a thick green left border, clearly bigger than sight names below them.
 function timeOfDayHeading(text) {
   const clean = text.replace(/^\*+|\*+$/g, '').trim();
   return new Paragraph({
-    children: [new TextRun({ text: clean, bold: true, font: 'Calibri', size: 26, color: '1a5a1a' })],
+    children: [new TextRun({ text: clean, bold: true, font: 'Calibri', size: 26, color: T.timeOfDay })],
     spacing: { before: 320, after: 100 },
-    border: { left: { style: BorderStyle.SINGLE, size: 18, color: '2e7d32', space: 10 } },
+    border: { left: { style: BorderStyle.SINGLE, size: T.tod_borderSize, color: T.tod_borderColor, space: 10 } },
   });
 }
 
@@ -217,7 +267,7 @@ function timeOfDayHeading(text) {
 const SUB_SECTION_RE = /^(Wat is er|Praktische\s*info|Etiquette|Leuke\s+weetjes|Hoe\s+te\s+bereiken|Openingstijden)/i;
 
 function sightSubHeading(text) {
-  const clean       = text.replace(/^\[|\]$/g, '').replace(/^\*+|\*+$/g, '').trim();
+  const clean        = text.replace(/^\[|\]$/g, '').replace(/^\*+|\*+$/g, '').trim();
   const isSubSection = SUB_SECTION_RE.test(clean);
   return new Paragraph({
     children: [new TextRun({
@@ -225,12 +275,12 @@ function sightSubHeading(text) {
       bold: true,
       font: 'Calibri',
       size: isSubSection ? 19 : 21,
-      color: isSubSection ? '455a64' : '2e6b2e',
+      color: isSubSection ? T.subsection : T.sight,
     })],
     spacing: { before: isSubSection ? 140 : 220, after: isSubSection ? 60 : 80 },
     border: isSubSection
       ? {}
-      : { bottom: { style: BorderStyle.SINGLE, size: 2, color: 'b0bec5', space: 2 } },
+      : { bottom: { style: BorderStyle.SINGLE, size: 2, color: 'c8c8c8', space: 2 } },
   });
 }
 
@@ -239,10 +289,9 @@ function meerInfoPara(s) {
   const cleanText = s.replace(/^📎\s*(Meer\s+info:\s*)?/i, '');
   return new Paragraph({
     children: [
-      new TextRun({ text: '📎 Meer info: ', font: 'Calibri', size: 18, color: '888888', bold: true }),
+      new TextRun({ text: '📎 Meer info: ', font: 'Calibri', size: 18, color: T.meerInfo, bold: true }),
       ...parseInline(cleanText, { size: 18, color: '555555' }),
     ],
-    // Large 'after' spacing so the next time-of-day heading has clear separation
     spacing: { before: 60, after: 240 },
   });
 }
@@ -294,11 +343,11 @@ function tipPara(text) {
   return new Paragraph({
     children: [
       new TextRun({ text: '💡 ', font: 'Calibri', size: 20 }),
-      new TextRun({ text: clean, font: 'Calibri', size: 19, italics: true, color: '2e7d32' }),
+      new TextRun({ text: clean, font: 'Calibri', size: 19, italics: true, color: T.tipColor }),
     ],
     spacing: { before: 80, after: 80 },
     indent: { left: 360, right: 360 },
-    border: { left: { style: BorderStyle.SINGLE, size: 6, color: '2e7d32', space: 8 } },
+    border: { left: { style: BorderStyle.SINGLE, size: 6, color: T.tod_borderColor, space: 8 } },
   });
 }
 
@@ -579,7 +628,7 @@ async function buildDocx() {
     if (sec.type === 'h1') {
       body.push(new Paragraph({
         heading: HeadingLevel.HEADING_1,
-        children: [new TextRun({ text: sec.title, font: 'Calibri', size: 36, bold: true, color: '1a5a1a' })],
+        children: [new TextRun({ text: sec.title, font: 'Calibri', size: 36, bold: true, color: T.h1 })],
         spacing: { before: 400, after: 200 },
         pageBreakBefore: body.length > 3,
       }));
@@ -600,7 +649,7 @@ async function buildDocx() {
           const h3m = s.match(/^###\s+(.+)/);
           if (h3m) { body.push(new Paragraph({
             heading: HeadingLevel.HEADING_3,
-            children: [new TextRun({ text: h3m[1], font: 'Calibri', size: 24, bold: true, color: '37474f' })],
+            children: [new TextRun({ text: h3m[1], font: 'Calibri', size: 24, bold: true, color: T.h3 })],
             spacing: { before: 260, after: 100 },
           })); continue; }
 
@@ -643,9 +692,9 @@ async function buildDocx() {
       body.push(new Paragraph({ children: [new PageBreak()] }));
       body.push(new Paragraph({
         heading: HeadingLevel.HEADING_2,
-        children: [new TextRun({ text: sec.title, font: 'Calibri', size: 28, bold: true, color: '2e7d32' })],
+        children: [new TextRun({ text: sec.title, font: 'Calibri', size: 28, bold: true, color: T.h2 })],
         spacing: { before: 240, after: 160 },
-        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '2e7d32', space: 1 } },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: T.h2, space: 1 } },
       }));
 
       // Inject photo(s) for this day section
@@ -695,7 +744,7 @@ async function buildDocx() {
           inDag     = currentH3.includes('dagindeling') || currentH3.includes('daily schedule') || currentH3.includes('schedule');
           body.push(new Paragraph({
             heading: HeadingLevel.HEADING_3,
-            children: [new TextRun({ text: h3m[1], font: 'Calibri', size: 24, bold: true, color: '37474f' })],
+            children: [new TextRun({ text: h3m[1], font: 'Calibri', size: 24, bold: true, color: T.h3 })],
             spacing: { before: 200, after: 100 },
           }));
           continue;
@@ -800,13 +849,13 @@ async function buildDocx() {
       default: { document: { run: { font: 'Calibri', size: 22 } } },
       paragraphStyles: [
         { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run: { size: 36, bold: true, font: 'Calibri', color: '1a5a1a' },
+          run: { size: 36, bold: true, font: 'Calibri', color: T.h1 },
           paragraph: { spacing: { before: 400, after: 200 }, outlineLevel: 0 } },
         { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run: { size: 28, bold: true, font: 'Calibri', color: '2e7d32' },
+          run: { size: 28, bold: true, font: 'Calibri', color: T.h2 },
           paragraph: { spacing: { before: 240, after: 160 }, outlineLevel: 1 } },
         { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run: { size: 24, bold: true, font: 'Calibri', color: '37474f' },
+          run: { size: 24, bold: true, font: 'Calibri', color: T.h3 },
           paragraph: { spacing: { before: 200, after: 100 }, outlineLevel: 2 } },
       ]
     },
