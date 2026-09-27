@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 ### Changed
+- The sibling copywriting skill is now named `travelguide-copywriting-skill` (was `travelguide-copywriter`); every reference follows.
 
 ### Fixed
 

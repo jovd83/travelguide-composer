@@ -1,11 +1,11 @@
 ---
 name: travelguide-composer
-description: "Enrich and compile an existing travel itinerary into a premium travel guide or roadbook. Trigger this skill whenever a user shares or pastes a travel plan, trip schedule, or itinerary — in any format (Word .docx, Excel .xlsx, PDF, markdown, or plain text) — and wants to: fill gaps (empty meals, bare URLs, missing activity descriptions), add restaurant recommendations, produce a styled output document, or choose a publication style (Michelin Green roadbook, Rick Steves opinionated, Boutique minimalist, DK Eyewitness visual, Lonely Planet backpacker, or Blue Guides scholarly). Also trigger for phrases like 'make this itinerary nicer', 'enrich my travel plan', 'turn my trip notes into a proper guide', 'I have a holiday itinerary and want a roadbook', or any time an itinerary file is uploaded and the user wants it improved or styled. This skill orchestrates structure and completeness — it delegates prose writing to the travelguide-copywriter companion skill."
+description: "Enrich and compile an existing travel itinerary into a premium travel guide or roadbook. Trigger this skill whenever a user shares or pastes a travel plan, trip schedule, or itinerary — in any format (Word .docx, Excel .xlsx, PDF, markdown, or plain text) — and wants to: fill gaps (empty meals, bare URLs, missing activity descriptions), add restaurant recommendations, produce a styled output document, or choose a publication style (Michelin Green roadbook, Rick Steves opinionated, Boutique minimalist, DK Eyewitness visual, Lonely Planet backpacker, or Blue Guides scholarly). Also trigger for phrases like 'make this itinerary nicer', 'enrich my travel plan', 'turn my trip notes into a proper guide', 'I have a holiday itinerary and want a roadbook', or any time an itinerary file is uploaded and the user wants it improved or styled. This skill orchestrates structure and completeness — it delegates prose writing to the travelguide-copywriting-skill companion skill."
 ---
 
 # Travelguide Composer — Structure & Completeness Orchestrator
 
-**Primary responsibility**: Ensure every day block in the travel guide is structurally complete and all content gaps are filled by the `travelguide-copywriter` skill. This skill writes NO prose itself. It detects, packages, delegates, stitches, and compiles.
+**Primary responsibility**: Ensure every day block in the travel guide is structurally complete and all content gaps are filled by the `travelguide-copywriting-skill` skill. This skill writes NO prose itself. It detects, packages, delegates, stitches, and compiles.
 
 ---
 
@@ -126,11 +126,11 @@ For each day section, source a minimum of 1 real photo before invoking the copyw
 
 ### Phase 6 — Invoke the Copywriter (One Gap at a Time)
 
-For each entry in the Gap Catalogue, invoke the `travelguide-copywriter` skill with a precise, self-contained payload. **Do not write any prose yourself** — your job here is to package the invocation correctly.
+For each entry in the Gap Catalogue, invoke the `travelguide-copywriting-skill` skill with a precise, self-contained payload. **Do not write any prose yourself** — your job here is to package the invocation correctly.
 
 **Invocation payload template:**
 ```markdown
-Run the travelguide-copywriter playbook with these parameters:
+Run the travelguide-copywriting-skill playbook with these parameters:
 - task: [dining_pick | sight_essay | activity_suggestion | pacing_label | etiquette_tips | sensory_moodboard | weather_grid]
 - location: [City, Region, Country] or [lat, lon]
 - lang: [nl | en | fr | de | ...]

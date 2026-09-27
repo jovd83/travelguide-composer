@@ -1,6 +1,6 @@
 # Gap Detection & Orchestration Guide
 
-This guide outlines the systematic procedure for finding content gaps in itineraries and orchestrating modular calls to the sibling `travelguide-copywriter` skill for individual segment enrichment.
+This guide outlines the systematic procedure for finding content gaps in itineraries and orchestrating modular calls to the sibling `travelguide-copywriting-skill` skill for individual segment enrichment.
 
 ---
 
@@ -19,7 +19,7 @@ When scanning the ingested itinerary representation, the orchestrator catalog mu
    - Action: Automatically populate all four daily dining nodes with physical addresses, operating hours, prices, and live-verified reviews.
 3. **Under-enriched Sights & Activities**:
    - Matches: Any named sight, landmark, or walking route listed in the itinerary (e.g. *KLCC Park*, *Batu Caves*, *Jonker Street*).
-   - Action: Flag these as primary copywriting gaps. Do not leave them as simple lists or bare links. Call the `travelguide-copywriter` skill playbooks to write highly sensory, visually detailed essays containing dimensions, diorama tables, and routing guidelines.
+   - Action: Flag these as primary copywriting gaps. Do not leave them as simple lists or bare links. Call the `travelguide-copywriting-skill` skill playbooks to write highly sensory, visually detailed essays containing dimensions, diorama tables, and routing guidelines.
 4. **Empty Timeframes**:
    - Matches: Statements like *"Afternoon: Free time"*, *"Explore Rome on your own"*, or *"Rest of the day free"*.
    - Action: Mine safe hikes, scenic walking routes, or visual landmarks matching traveler ages and interests.
@@ -46,7 +46,7 @@ If a link is associated with a gap:
 
 ## 3. Worker Orchestration Workflow (Sequential Invocations)
 
-For every identified gap, call the `travelguide-copywriter` skill one by one:
+For every identified gap, call the `travelguide-copywriting-skill` skill one by one:
 
 ```
 [Composer Orchestrator]
@@ -60,7 +60,7 @@ For every identified gap, call the `travelguide-copywriter` skill one by one:
 When triggering the copywriter for an individual section, construct a precise task instruction:
 
 ```markdown
-Run the travelguide-copywriter playbook for the following slot:
+Run the travelguide-copywriting-skill playbook for the following slot:
 - Location / Context: [Scraped text / Coordinates / Landmark name]
 - Demographics: [Ages: e.g., Toddler, Parents; Diet: e.g., Vegan; Interests: e.g., History]
 - Tone Style: [Match chosen theme - e.g., "minimalist and poetic" for Boutique]

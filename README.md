@@ -3,19 +3,19 @@
 [![AgentSkill](https://img.shields.io/badge/AgentSkill-1.0.0-blue)](https://github.com/jovd83/travelguide-composer)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Compatible-brightgreen)](https://claude.ai/code)
-[![Companion: travelguide-copywriter](https://img.shields.io/badge/Companion-travelguide--copywriter-orange)](https://github.com/jovd83/travelguide-copywriting-skill)
+[![Companion: travelguide-copywriting-skill](https://img.shields.io/badge/Companion-travelguide--copywriter-orange)](https://github.com/jovd83/travelguide-copywriting-skill)
 [![Eval: 100%](https://img.shields.io/badge/Eval-100%25%20pass-success)](travelguide-composer/evals/evals.json)
 [![Format: DOCX+HTML](https://img.shields.io/badge/Output-DOCX%20%7C%20HTML%20%7C%20PDF-informational)]()
 
 **Structure & completeness orchestrator for premium travel guides and roadbooks.**
 
-Parses existing travel itineraries (`.md`, `.docx`, `.xlsx`, `.pdf`), builds a numbered Gap Catalogue, delegates all prose writing to the `travelguide-copywriter` companion skill, and compiles the result into a print-ready DOCX roadbook or interactive HTML guide — in six publication styles, with photos, Leaflet maps, and a climate table.
+Parses existing travel itineraries (`.md`, `.docx`, `.xlsx`, `.pdf`), builds a numbered Gap Catalogue, delegates all prose writing to the `travelguide-copywriting-skill` companion skill, and compiles the result into a print-ready DOCX roadbook or interactive HTML guide — in six publication styles, with photos, Leaflet maps, and a climate table.
 
 ## What it does
 
 1. **Ingests** your source itinerary in any format
 2. **Catalogues** every structural gap: empty meals, bare URLs, missing activities, absent pacing labels, no etiquette tips — numbered `[GAP-01]`, `[GAP-02]`...
-3. **Delegates** each gap to `travelguide-copywriter` with a typed invocation payload (`task/location/lang/style/scope`)
+3. **Delegates** each gap to `travelguide-copywriting-skill` with a typed invocation payload (`task/location/lang/style/scope`)
 4. **Verifies** structural completeness per day (Algemeen → Hotel → Maaltijden → Gereserveerde activiteiten → Dagindeling)
 5. **Compiles** to DOCX (with TOC, page numbers, A4 Calibri fonts) or HTML (with Leaflet maps)
 
@@ -33,7 +33,7 @@ Parses existing travel itineraries (`.md`, `.docx`, `.xlsx`, `.pdf`), builds a n
 ## Requirements
 
 - Claude Code (claude-sonnet-4-6 or later)
-- `travelguide-copywriter` companion skill installed
+- `travelguide-copywriting-skill` companion skill installed
 - Node.js v18+ with `docx` npm package (for DOCX output)
 - Python 3.10+ (for HTML compilation and parsing)
 
